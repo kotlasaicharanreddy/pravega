@@ -650,7 +650,6 @@ public class StreamTransactionMetadataTasksTest {
         EventStreamWriterMock<CommitEvent> commitWriter = new EventStreamWriterMock<>();
         EventStreamWriterMock<AbortEvent> abortWriter = new EventStreamWriterMock<>();
         StreamMetadataStore streamStoreMock = spy(StreamStoreFactory.createZKStore(zkClient, executor));
-        final long leasePeriod = 5000;
 
         // region close before initialize
         txnTasks = new StreamTransactionMetadataTasks(streamStoreMock, 
@@ -699,13 +698,13 @@ public class StreamTransactionMetadataTasksTest {
         streamStore.createStream(SCOPE, STREAM, StreamConfiguration.builder().scalingPolicy(ScalingPolicy.fixed(1)).build(), 1L, null, executor).join();
         streamStore.setState(SCOPE, STREAM, State.ACTIVE, null, executor).join();
 
-        CompletableFuture<Pair<VersionedTransactionData, List<StreamSegmentRecord>>> createFuture = txnTasks.createTxn(SCOPE, STREAM, leasePeriod, null);
+        CompletableFuture<Pair<VersionedTransactionData, List<StreamSegmentRecord>>> createFuture = txnTasks.createTxn(SCOPE, STREAM, 100L, null);
 
         // create and ping transactions should not wait for writer initialization and complete immediately.
         createFuture.join();
         assertTrue(Futures.await(createFuture));
         UUID txnId = createFuture.join().getKey().getId();
-        CompletableFuture<PingTxnStatus> pingFuture = txnTasks.pingTxn(SCOPE, STREAM, txnId, leasePeriod, null);
+        CompletableFuture<PingTxnStatus> pingFuture = txnTasks.pingTxn(SCOPE, STREAM, txnId, 100L, null);
         assertTrue(Futures.await(pingFuture));
 
         CompletableFuture<TxnStatus> commitFuture = txnTasks.commitTxn(SCOPE, STREAM, txnId, null);
@@ -713,7 +712,7 @@ public class StreamTransactionMetadataTasksTest {
 
         txnTasks.initializeStreamWriters(commitWriter, abortWriter);
         assertTrue(Futures.await(commitFuture));
-        UUID txnId2 = txnTasks.createTxn(SCOPE, STREAM, leasePeriod, null).join().getKey().getId();
+        UUID txnId2 = txnTasks.createTxn(SCOPE, STREAM, 100L, null).join().getKey().getId();
         assertTrue(Futures.await(txnTasks.abortTxn(SCOPE, STREAM, txnId2, null, null)));
     }
     
