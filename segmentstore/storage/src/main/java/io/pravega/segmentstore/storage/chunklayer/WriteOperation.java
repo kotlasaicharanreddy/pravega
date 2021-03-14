@@ -179,8 +179,7 @@ class WriteOperation implements Callable<CompletableFuture<Void>> {
         // commit all system log records if required.
         if (isSystemSegment && chunksAddedCount.get() > 0) {
             // commit all system log records.
-            Preconditions.checkState(chunksAddedCount.get() == systemLogRecords.size(),
-                    "Number of chunks added (%s) must match number of system log records(%s)", chunksAddedCount.get(), systemLogRecords.size());
+            Preconditions.checkState(chunksAddedCount.get() == systemLogRecords.size());
             txn.setExternalCommitStep(() -> {
                 chunkedSegmentStorage.getSystemJournal().commitRecords(systemLogRecords);
                 return null;
@@ -306,10 +305,12 @@ class WriteOperation implements Callable<CompletableFuture<Void>> {
     }
 
     private void checkPreconditions() {
-        Preconditions.checkArgument(null != data, "data must not be null");
-        Preconditions.checkArgument(!handle.isReadOnly(), "handle must not be read only. Segment = %s", handle.getSegmentName());
-        Preconditions.checkArgument(offset >= 0, "offset must be non negative. Segment = %s", handle.getSegmentName());
-        Preconditions.checkArgument(length >= 0, "length must be non negative. Segment = %s", handle.getSegmentName());
+        Preconditions.checkArgument(null != handle, "handle");
+        Preconditions.checkArgument(null != data, "data");
+        Preconditions.checkArgument(null != handle.getSegmentName(), "handle.segmentName");
+        Preconditions.checkArgument(!handle.isReadOnly(), "handle");
+        Preconditions.checkArgument(offset >= 0, "offset");
+        Preconditions.checkArgument(length >= 0, "length");
     }
 
     private String getNewChunkName(String segmentName, long offset) {
@@ -380,7 +381,7 @@ class WriteOperation implements Callable<CompletableFuture<Void>> {
                                                     ChunkMetadata chunkWrittenMetadata,
                                                     long offsetToWriteAt,
                                                     int bytesCount) {
-        Preconditions.checkState(0 != bytesCount, "Attempt to write zero bytes. Segment=%s Chunk=%s offsetToWriteAt=%s", segmentMetadata, chunkWrittenMetadata, offsetToWriteAt);
+        Preconditions.checkState(0 != bytesCount, "Attempt to write zero bytes");
         // Finally write the data.
         val bis = new BoundedInputStream(data, bytesCount);
         CompletableFuture<Integer> retValue;
@@ -393,8 +394,7 @@ class WriteOperation implements Callable<CompletableFuture<Void>> {
         return retValue
                 .thenAcceptAsync(bytesWritten -> {
                     // Update the metadata for segment and chunk.
-                    Preconditions.checkState(bytesWritten >= 0, "bytesWritten (%s) must be non-negative. Segment=%s Chunk=%s offsetToWriteAt=%s",
-                            bytesWritten, segmentMetadata, chunkWrittenMetadata, offsetToWriteAt);
+                    Preconditions.checkState(bytesWritten >= 0, "bytesWritten must be non-negative");
                     segmentMetadata.setLength(segmentMetadata.getLength() + bytesWritten);
                     chunkWrittenMetadata.setLength(chunkWrittenMetadata.getLength() + bytesWritten);
                     txn.update(chunkWrittenMetadata);
